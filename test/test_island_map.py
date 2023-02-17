@@ -1,5 +1,6 @@
 import pytest
 from island_map import Map
+from utils import Point
 
 
 @pytest.fixture()
@@ -23,3 +24,15 @@ def test_get_land_indexes(sample_map):
     assert sample_map._land_indexes[0] == (1, 1)
     assert sample_map._land_indexes[0] == (1, 1)
     assert sample_map._land_indexes[-1] == (7, 6)
+
+
+def test_calculate_distances(sample_map):
+    land_distances = list(sample_map._land_distances)
+    assert land_distances[0] == ((Point(x=1, y=1), Point(x=1, y=1)), 0.0)
+    assert land_distances[1] == ((Point(x=1, y=1), Point(x=2, y=0)), 1.4142135623730951)
+
+
+def test_filter_non_adjacent_points(sample_map):
+    adjacent_points = list(sample_map._adjacent_points)
+    assert all(distance < 1.42 for points, distance in adjacent_points)
+    print(len(adjacent_points))
