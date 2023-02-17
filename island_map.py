@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 
 from utils import Point, euclidian_distance
 from itertools import combinations_with_replacement
@@ -12,6 +13,7 @@ class Map:
         self._transform_to_land_indexes()
         self._calculate_distance_between_land_coords()
         self._filter_nonadjacent_points()
+        self._create_neighbourhood_map()
 
     @property
     def land_indexes(self):
@@ -47,9 +49,41 @@ class Map:
 
     def _calculate_distance_between_land_coords(self):
         point_pairs = combinations_with_replacement(self._land_indexes, 2)
-        self._land_distances = (((p1, p2), euclidian_distance(p1, p2))
-                                for (p1, p2) in point_pairs)
+        self._land_distances = [((p1, p2), euclidian_distance(p1, p2))
+                                for (p1, p2) in point_pairs]
 
     def _filter_nonadjacent_points(self):
         self._adjacent_points = ((points, distance) for points, distance in self._land_distances
                                  if distance < 1.42)
+
+    def _create_neighbourhood_map(self):
+        neighbours = {i: set() for i in self._land_indexes}
+        for (p1, p2), _ in self._adjacent_points:
+            neighbours[p1].add(p2)
+            neighbours[p2].add(p1)
+
+        self._neighbours = neighbours
+
+    @staticmethod
+    def _extend_neighbours(current_neighbours):
+        new_neighbours = deepcopy(current_neighbours)
+        for point, neighbourhood in current_neighbours.items():
+            extended_neighbours = []
+            for neighbour in neighbourhood:
+                extended_neighbours.append(new_neighbours[neighbour])
+            new_neighbours[point] = new_neighbours[point].union(*extended_neighbours)
+
+        return new_neighbours
+
+    def find_islands(self):
+        extended_neighbours = deepcopy(self._neighbours)
+        while (new_neighbourhood := self._extend_neighbours(extended_neighbours)) != extended_neighbours:
+            self._logger.info("NEXT ITERATION")
+            extended_neighbours = new_neighbourhood
+
+        islands = self._get_unique_groups(extended_neighbours.values())
+        return len(islands)
+
+    @staticmethod
+    def _get_unique_groups(groups):
+        return set(frozenset(f) for f in groups)
