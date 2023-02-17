@@ -1,4 +1,7 @@
 import logging
+from collections import namedtuple
+
+Point = namedtuple('Point', ("x", "y"))
 
 
 class Map:
@@ -6,6 +9,7 @@ class Map:
         self.__initialize_logging()
         self._path = path
         self._load_and_parse_file()
+        self._transform_to_land_indexes()
 
     def __initialize_logging(self):
         self._logger = logging.Logger(self.__class__.__name__)
@@ -26,3 +30,11 @@ class Map:
         *characters, new_line_char = row
         return tuple(int(char) for char in characters)
 
+    def _transform_to_land_indexes(self):
+        self._land_indexes = []
+
+        for x_coord, row in enumerate(self._parsed_content):
+            land_indexes_in_row = [Point(x_coord, y_coord) for y_coord, value in enumerate(row)
+                                   if value == 1]
+            logging.error(land_indexes_in_row)
+            self._land_indexes.extend(land_indexes_in_row)
