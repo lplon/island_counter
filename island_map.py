@@ -1,7 +1,6 @@
 import logging
-from collections import namedtuple
 
-Point = namedtuple('Point', ("x", "y"))
+from utils import Point
 
 
 class Map:
@@ -10,6 +9,10 @@ class Map:
         self._path = path
         self._load_and_parse_file()
         self._transform_to_land_indexes()
+
+    @property
+    def land_indexes(self):
+        return self._land_indexes
 
     def __initialize_logging(self):
         self._logger = logging.Logger(self.__class__.__name__)
