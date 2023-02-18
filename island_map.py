@@ -1,13 +1,17 @@
 import logging
 from copy import deepcopy
+from typing import Iterable
 
 from utils import Point
 
 
-class Map:
+class IslandMap:
+    """
+    IslandMap class for calculating number of islands, according to <...> instruction
+    """
     LAND_INDEX_VALUE = 1
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         self._path = path
         self._land_neighbours = None
         self._islands = None
@@ -17,16 +21,19 @@ class Map:
         self._find_land_neighbours()
 
     @property
-    def land_indexes(self):
+    def land_indexes(self) -> set:
+        """Returns all indexes which are marked as "LAND" """
         return self._land_indexes
 
     @property
-    def islands(self):
+    def islands(self) -> set:
+        """Returns adjacent indexes grouped into islands """
         if self._islands is not None:
             return self._islands
 
     @property
-    def island_count(self):
+    def island_count(self) -> int:
+        """Returns number of islands found on given map """
         if self._islands is not None:
             return len(self._islands)
 
@@ -34,10 +41,13 @@ class Map:
         self._logger = logging.Logger(self.__class__.__name__)
 
     def _load_and_parse_file(self):
+        """Loads, parses and transforms file into set of Points"""
         try:
             with open(self._path, "r") as f:
                 parsed_content = (self._parse_row(row) for row in f)
-                self._land_indexes = {Point(x_coord, y_coord) for (x_coord, row) in enumerate(parsed_content)
+
+                self._land_indexes = {Point(x_coord, y_coord)
+                                      for (x_coord, row) in enumerate(parsed_content)
                                       for (y_coord, value) in enumerate(row)
                                       if value == self.LAND_INDEX_VALUE}
         except FileNotFoundError:
@@ -48,12 +58,13 @@ class Map:
             raise
 
     @staticmethod
-    def _parse_row(row):
-        *characters, new_line_char = row
-        return tuple(int(char) for char in characters)
+    def _parse_row(row: str) -> tuple[int]:
+        """Transforms a single line into tuple of ints"""
+        return tuple(int(char) for char in row.strip())
 
     @staticmethod
-    def _find_neighbours_indexes(point: Point):
+    def _find_neighbours_indexes(point: Point) -> set:
+        """Finds indexes of adjacent points; doesn't care if it is a land or water"""
         x_cords = (point.x - 1, point.x, point.x + 1)
         y_cords = (point.y - 1, point.y, point.y + 1)
         neighbours = {Point(x, y) for x in x_cords
@@ -61,11 +72,13 @@ class Map:
         return neighbours
 
     def _find_land_neighbours(self):
+        """Finds adjacent land indexes for all land indexes found in the map"""
         self._land_neighbours = {index: self._land_indexes.intersection(self._find_neighbours_indexes(index))
                                  for index in self._land_indexes}
 
     @staticmethod
-    def _extend_neighbours(current_neighbours):
+    def _extend_neighbours(current_neighbours: dict[Point, set]) -> dict[Point, set]:
+        """In single iteration extends neighbourhood of given points with neighbours of its neighbours """
         new_neighbours = deepcopy(current_neighbours)
 
         for point, neighbourhood in current_neighbours.items():
@@ -74,7 +87,8 @@ class Map:
 
         return new_neighbours
 
-    def find_islands(self):
+    def find_islands(self) -> set:
+        """ Calculates and returns set of adjacent points, grouped into islands """
         while (new_neighbourhood := self._extend_neighbours(self._land_neighbours)) != self._land_neighbours:
             self._land_neighbours = new_neighbourhood
 
@@ -83,5 +97,6 @@ class Map:
         return self._islands
 
     @staticmethod
-    def _get_unique_groups(groups):
+    def _get_unique_groups(groups: Iterable) -> set:
+        """Drops repeated sets of points"""
         return set(frozenset(f) for f in groups)
