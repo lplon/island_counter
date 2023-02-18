@@ -8,14 +8,27 @@ class Map:
     LAND_INDEX_VALUE = 1
 
     def __init__(self, path):
-        self.__initialize_logging()
         self._path = path
+        self._land_neighbours = None
+        self._islands = None
+
+        self.__initialize_logging()
         self._load_and_parse_file()
         self._find_land_neighbours()
 
     @property
     def land_indexes(self):
         return self._land_indexes
+
+    @property
+    def islands(self):
+        if self._islands is not None:
+            return self._islands
+
+    @property
+    def island_count(self):
+        if self._islands is not None:
+            return len(self._islands)
 
     def __initialize_logging(self):
         self._logger = logging.Logger(self.__class__.__name__)
@@ -41,10 +54,10 @@ class Map:
 
     @staticmethod
     def _find_neighbours_indexes(point: Point):
-        x_coords = [x for x in (point.x - 1, point.x, point.x + 1) if x >= 0]
-        y_coords = [y for y in (point.y - 1, point.y, point.y + 1) if y >= 0]
-        neighbours = {Point(x, y) for x in x_coords
-                      for y in y_coords}
+        x_cords = (point.x - 1, point.x, point.x + 1)
+        y_cords = (point.y - 1, point.y, point.y + 1)
+        neighbours = {Point(x, y) for x in x_cords
+                      for y in y_cords}
         return neighbours
 
     def _find_land_neighbours(self):
@@ -54,22 +67,20 @@ class Map:
     @staticmethod
     def _extend_neighbours(current_neighbours):
         new_neighbours = deepcopy(current_neighbours)
+
         for point, neighbourhood in current_neighbours.items():
-            extended_neighbours = []
-            for neighbour in neighbourhood:
-                extended_neighbours.append(new_neighbours[neighbour])
-            new_neighbours[point] = new_neighbours[point].union(*extended_neighbours)
+            extended_neighbours = (new_neighbours[neighbour] for neighbour in neighbourhood)
+            new_neighbours[point] = set().union(*extended_neighbours)
 
         return new_neighbours
 
     def find_islands(self):
-        extended_neighbours = deepcopy(self._land_neighbours)
-        while (new_neighbourhood := self._extend_neighbours(extended_neighbours)) != extended_neighbours:
-            self._logger.info("NEXT ITERATION")
-            extended_neighbours = new_neighbourhood
+        while (new_neighbourhood := self._extend_neighbours(self._land_neighbours)) != self._land_neighbours:
+            self._land_neighbours = new_neighbourhood
 
-        islands = self._get_unique_groups(extended_neighbours.values())
-        return len(islands)
+        self._islands = self._get_unique_groups(self._land_neighbours.values())
+
+        return self._islands
 
     @staticmethod
     def _get_unique_groups(groups):

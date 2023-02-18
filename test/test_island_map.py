@@ -21,7 +21,6 @@ def test_get_land_indexes(sample_map):
 
 @pytest.mark.parametrize("point, neighbours",
                          [((1, 1), [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 2)]),
-                          ((0, 0), [(0, 0), (0, 1), (1, 0), (1, 1)]),
                           ])
 def test_find_neighbour_indexes(point, neighbours):
     calculated_neighbours = Map._find_neighbours_indexes(Point(*point))
@@ -41,8 +40,16 @@ def another_map():
 
 
 def test_number_of_islands(sample_map):
-    assert sample_map.find_islands() == 4
+    sample_map.find_islands()
+    assert sample_map.island_count == 4
 
 
 def test_another_map(another_map):
-    assert another_map.find_islands() == 5
+    another_map.find_islands()
+    assert another_map.island_count == 5
+
+
+def test_generated_map():
+    path = "resources/generated_map.txt"
+    island_map = Map(path)
+    island_map.find_islands()
