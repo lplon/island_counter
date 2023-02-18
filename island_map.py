@@ -1,19 +1,17 @@
 import logging
 from copy import deepcopy
 
-from utils import Point, euclidian_distance
-from itertools import combinations_with_replacement
+from utils import Point
 
 
 class Map:
+    LAND_INDEX_VALUE = 1
+
     def __init__(self, path):
         self.__initialize_logging()
         self._path = path
         self._load_and_parse_file()
-        self._transform_to_land_indexes()
-        self._calculate_distance_between_land_coords()
-        self._filter_nonadjacent_points()
-        self._create_neighbourhood_map()
+        self._find_land_neighbours()
 
     @property
     def land_indexes(self):
@@ -25,7 +23,10 @@ class Map:
     def _load_and_parse_file(self):
         try:
             with open(self._path, "r") as f:
-                self._parsed_content = [self._parse_row(row) for row in f]
+                parsed_content = (self._parse_row(row) for row in f)
+                self._land_indexes = {Point(x_coord, y_coord) for (x_coord, row) in enumerate(parsed_content)
+                                      for (y_coord, value) in enumerate(row)
+                                      if value == self.LAND_INDEX_VALUE}
         except FileNotFoundError:
             self._logger.error(f"Cannot load file, please check if provided path is correct. Given path: {self._path}")
             raise
@@ -38,31 +39,17 @@ class Map:
         *characters, new_line_char = row
         return tuple(int(char) for char in characters)
 
-    def _transform_to_land_indexes(self, land_index_value: int = 1):
-        self._land_indexes = []
+    @staticmethod
+    def _find_neighbours_indexes(point: Point):
+        x_coords = [x for x in (point.x - 1, point.x, point.x + 1) if x >= 0]
+        y_coords = [y for y in (point.y - 1, point.y, point.y + 1) if y >= 0]
+        neighbours = {Point(x, y) for x in x_coords
+                      for y in y_coords}
+        return neighbours
 
-        for x_coord, row in enumerate(self._parsed_content):
-            land_indexes_in_row = [Point(x_coord, y_coord) for y_coord, value in enumerate(row)
-                                   if value == land_index_value]
-            logging.error(land_indexes_in_row)
-            self._land_indexes.extend(land_indexes_in_row)
-
-    def _calculate_distance_between_land_coords(self):
-        point_pairs = combinations_with_replacement(self._land_indexes, 2)
-        self._land_distances = [((p1, p2), euclidian_distance(p1, p2))
-                                for (p1, p2) in point_pairs]
-
-    def _filter_nonadjacent_points(self):
-        self._adjacent_points = ((points, distance) for points, distance in self._land_distances
-                                 if distance < 1.42)
-
-    def _create_neighbourhood_map(self):
-        neighbours = {i: set() for i in self._land_indexes}
-        for (p1, p2), _ in self._adjacent_points:
-            neighbours[p1].add(p2)
-            neighbours[p2].add(p1)
-
-        self._neighbours = neighbours
+    def _find_land_neighbours(self):
+        self._land_neighbours = {index: self._land_indexes.intersection(self._find_neighbours_indexes(index))
+                                 for index in self._land_indexes}
 
     @staticmethod
     def _extend_neighbours(current_neighbours):
@@ -76,7 +63,7 @@ class Map:
         return new_neighbours
 
     def find_islands(self):
-        extended_neighbours = deepcopy(self._neighbours)
+        extended_neighbours = deepcopy(self._land_neighbours)
         while (new_neighbourhood := self._extend_neighbours(extended_neighbours)) != extended_neighbours:
             self._logger.info("NEXT ITERATION")
             extended_neighbours = new_neighbourhood
