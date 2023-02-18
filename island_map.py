@@ -16,7 +16,7 @@ class IslandMap:
         self._land_neighbours = None
         self._islands = None
 
-        self.__initialize_logging()
+        self._initialize_logging()
         self._load_and_parse_file()
         self._find_land_neighbours()
 
@@ -37,7 +37,16 @@ class IslandMap:
         if self._islands is not None:
             return len(self._islands)
 
-    def __initialize_logging(self):
+    def find_islands(self) -> set:
+        """ Calculates and returns set of adjacent points, grouped into islands """
+        while (new_neighbourhood := self._extend_neighbours(self._land_neighbours)) != self._land_neighbours:
+            self._land_neighbours = new_neighbourhood
+
+        self._islands = self._get_unique_groups(self._land_neighbours.values())
+
+        return self._islands
+
+    def _initialize_logging(self):
         self._logger = logging.Logger(self.__class__.__name__)
 
     def _load_and_parse_file(self):
@@ -86,15 +95,6 @@ class IslandMap:
             new_neighbours[point] = set().union(*extended_neighbours)
 
         return new_neighbours
-
-    def find_islands(self) -> set:
-        """ Calculates and returns set of adjacent points, grouped into islands """
-        while (new_neighbourhood := self._extend_neighbours(self._land_neighbours)) != self._land_neighbours:
-            self._land_neighbours = new_neighbourhood
-
-        self._islands = self._get_unique_groups(self._land_neighbours.values())
-
-        return self._islands
 
     @staticmethod
     def _get_unique_groups(groups: Iterable) -> set:
